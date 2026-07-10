@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 24% 98%;
+    --foreground: 222 28% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 28% 12%;
+    --primary: 205 86% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 156 28% 92%;
+    --secondary-foreground: 165 52% 18%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 14% 42%;
+    --accent: 36 86% 90%;
+    --accent-foreground: 29 68% 22%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 22% 86%;
+    --input: 214 22% 86%;
+    --ring: 205 86% 42%;
+    --radius: 8px;
+  }
+
+  .dark {
+    --background: 220 16% 10%;
+    --foreground: 210 24% 96%;
+    --card: 218 15% 14%;
+    --card-foreground: 210 24% 96%;
+    --primary: 197 78% 52%;
+    --primary-foreground: 210 24% 8%;
+    --secondary: 154 16% 20%;
+    --secondary-foreground: 154 42% 84%;
+    --muted: 218 12% 20%;
+    --muted-foreground: 215 15% 70%;
+    --accent: 35 46% 23%;
+    --accent-foreground: 38 92% 86%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 218 12% 24%;
+    --input: 218 12% 24%;
+    --ring: 197 78% 52%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    margin: 0;
+    font-family:
+      Inter, "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui,
+      sans-serif;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  .terminal-shell .xterm {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .terminal-shell .xterm-viewport {
+    overflow-y: auto !important;
+  }
+}
