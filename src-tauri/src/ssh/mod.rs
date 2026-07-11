@@ -253,7 +253,8 @@ pub async fn run_command_on_handle_with_input_timeout(
                 }) => {
                     exit_status = Some(status);
                 }
-                Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => break Ok(()),
+                Some(ChannelMsg::Eof) => {}
+                Some(ChannelMsg::Close) | None => break Ok(()),
                 _ => {}
             }
         }

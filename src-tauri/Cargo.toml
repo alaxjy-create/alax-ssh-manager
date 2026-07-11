@@ -1,6 +1,6 @@
 [package]
 name = "alax-ssh-manager"
-version = "0.5.2"
+version = "0.5.3"
 description = "ALAX SSH Manager desktop app"
 authors = ["ALAX"]
 license = "MIT"
