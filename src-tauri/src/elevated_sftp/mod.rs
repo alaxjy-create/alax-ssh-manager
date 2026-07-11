@@ -14,6 +14,7 @@ pub fn should_try_elevation(error: &str) -> bool {
 
 pub async fn read_dir(
     config: &ServerConnectionConfig,
+    handle: &ssh::SshHandle,
     path: &str,
 ) -> Result<Vec<sftp::RemoteFileEntry>, String> {
     let script = r#"
@@ -56,7 +57,7 @@ print(json.dumps(rows, ensure_ascii=False))
         shell_quote(script),
         shell_quote(path)
     );
-    let output = run_sudo_command(config, &command).await?;
+    let output = run_sudo_command_on_handle(config, handle, &command).await?;
     if !output.is_success() {
         return Err(format!(
             "Elevated read directory failed with status {}: {}",
@@ -411,6 +412,22 @@ async fn run_sudo_command(
     let password = sudo_password(config).await?;
     let input = format!("{password}\n");
     ssh::run_command_with_input(config, command, Some(&input)).await
+}
+
+async fn run_sudo_command_on_handle(
+    config: &ServerConnectionConfig,
+    handle: &ssh::SshHandle,
+    command: &str,
+) -> Result<ssh::CommandResult, String> {
+    let password = sudo_password(config).await?;
+    let input = format!("{password}\n");
+    ssh::run_command_on_handle_with_input_timeout(
+        handle,
+        command,
+        Some(&input),
+        Duration::from_secs(60),
+    )
+    .await
 }
 
 async fn sudo_password(config: &ServerConnectionConfig) -> Result<String, String> {

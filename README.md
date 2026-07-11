@@ -6,13 +6,20 @@
 
 ALAX SSH Manager 是一款 Windows 优先的 SSH/SFTP 桌面管理工具，使用 Tauri、React 和 Rust 构建。
 
-当前版本：**v0.5.1**。
+当前版本：**v0.5.2**。
 
 ## 下载
 
 - [GitHub Releases](https://github.com/alaxjy-create/alax-ssh-manager/releases/latest)
 - 绿色版无需安装，服务器配置和凭据保存在当前 Windows 用户的本地数据目录与系统凭据存储中。
-- v0.5.1 暂未进行 Authenticode 代码签名。运行前请核对 Release 页面提供的 SHA-256；Windows SmartScreen 可能显示未知发布者提示。
+- v0.5.2 暂未进行 Authenticode 代码签名。运行前请核对 Release 页面提供的 SHA-256；Windows SmartScreen 可能显示未知发布者提示。
+
+## v0.5.2 更新
+
+- 修复 SFTP 重复导航导致历史索引越界、后退按钮点击无反应的问题。
+- 目录读取期间禁用重复导航，并忽略过期请求，避免并发 SSH/SFTP 读取覆盖当前目录。
+- 受保护目录在 sudo 回退期间显示明确加载状态，读取失败会直接显示原因。
+- sudo 权限回退复用当前已认证 SSH 连接，避免重新握手造成受保护目录长时间无响应。
 
 ## v0.5.1 更新
 

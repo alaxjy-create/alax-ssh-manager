@@ -36,61 +36,55 @@ async fn open_sftp(handle: &SshHandle) -> Result<SftpSession, String> {
 }
 
 pub async fn read_dir(handle: &SshHandle, path: &str) -> Result<Vec<RemoteFileEntry>, String> {
-    let result = async {
-        let sftp = open_sftp(handle).await?;
-        let remote_path = normalize_remote_path(path);
-        let read_dir = sftp
-            .read_dir(&remote_path)
-            .await
-            .map_err(|error| format!("Unable to read remote directory: {error}"))?;
+    let sftp = open_sftp(handle).await?;
+    let remote_path = normalize_remote_path(path);
+    let read_dir = sftp
+        .read_dir(&remote_path)
+        .await
+        .map_err(|error| format!("Unable to read remote directory: {error}"))?;
 
-        let mut mapped = Vec::new();
-        for entry in read_dir {
-            let name = entry.file_name();
-            let metadata = entry.metadata();
-            let file_type = metadata.file_type();
-            let kind = if file_type.is_dir() {
-                "directory"
-            } else if file_type.is_symlink() {
-                "link"
-            } else {
-                "file"
-            };
+    let mut mapped = Vec::new();
+    for entry in read_dir {
+        let name = entry.file_name();
+        let metadata = entry.metadata();
+        let file_type = metadata.file_type();
+        let kind = if file_type.is_dir() {
+            "directory"
+        } else if file_type.is_symlink() {
+            "link"
+        } else {
+            "file"
+        };
 
-            mapped.push(RemoteFileEntry {
-                id: Uuid::new_v4().to_string(),
-                name: name.clone(),
-                path: entry.path(),
-                kind: kind.to_string(),
-                size: metadata.size.unwrap_or(0) as i64,
-                modified_at: metadata
-                    .mtime
-                    .and_then(|mtime| chrono::DateTime::from_timestamp(mtime as i64, 0))
-                    .map(|value| value.format("%Y-%m-%d %H:%M:%S").to_string())
-                    .unwrap_or_else(|| "-".to_string()),
-                permissions: metadata
-                    .permissions
-                    .map(|perm| format!("{:o}", perm & 0o7777))
-                    .unwrap_or_else(|| "-".to_string()),
-                owner: match (metadata.uid, metadata.gid) {
-                    (Some(uid), Some(gid)) => format!("{uid}:{gid}"),
-                    (Some(uid), None) => uid.to_string(),
-                    _ => "-".to_string(),
-                },
-            });
-        }
-
-        mapped.sort_by(|a, b| {
-            a.kind
-                .cmp(&b.kind)
-                .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+        mapped.push(RemoteFileEntry {
+            id: Uuid::new_v4().to_string(),
+            name: name.clone(),
+            path: entry.path(),
+            kind: kind.to_string(),
+            size: metadata.size.unwrap_or(0) as i64,
+            modified_at: metadata
+                .mtime
+                .and_then(|mtime| chrono::DateTime::from_timestamp(mtime as i64, 0))
+                .map(|value| value.format("%Y-%m-%d %H:%M:%S").to_string())
+                .unwrap_or_else(|| "-".to_string()),
+            permissions: metadata
+                .permissions
+                .map(|perm| format!("{:o}", perm & 0o7777))
+                .unwrap_or_else(|| "-".to_string()),
+            owner: match (metadata.uid, metadata.gid) {
+                (Some(uid), Some(gid)) => format!("{uid}:{gid}"),
+                (Some(uid), None) => uid.to_string(),
+                _ => "-".to_string(),
+            },
         });
-        Ok(mapped)
     }
-    .await;
 
-    disconnect(handle).await;
-    result
+    mapped.sort_by(|a, b| {
+        a.kind
+            .cmp(&b.kind)
+            .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+    });
+    Ok(mapped)
 }
 
 pub async fn create_dir(handle: &SshHandle, path: &str) -> Result<(), String> {

@@ -940,7 +940,7 @@ pub async fn sftp_read_dir(
         .map_err(|error| error.to_string())?;
     let handle = ssh::connect(&server).await?;
     let entries = match sftp::read_dir(&handle, &path).await {
-        Ok(entries) => entries,
+        Ok(entries) => Ok(entries),
         Err(error) if elevated_sftp::should_try_elevation(&error) => {
             let _ = logs::append_event(
                 &state.paths.log_dir,
@@ -948,10 +948,12 @@ pub async fn sftp_read_dir(
                 "sftp",
                 &format!("Read directory with SFTP failed, retrying with sudo: {path}"),
             );
-            elevated_sftp::read_dir(&server, &path).await?
+            elevated_sftp::read_dir(&server, &handle, &path).await
         }
-        Err(error) => return Err(error),
+        Err(error) => Err(error),
     };
+    ssh::disconnect(&handle).await;
+    let entries = entries?;
     logs::append_event(
         &state.paths.log_dir,
         "info",

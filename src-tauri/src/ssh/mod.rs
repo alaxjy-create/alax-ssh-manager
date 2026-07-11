@@ -199,72 +199,78 @@ pub async fn run_command_with_input_timeout(
     command_timeout: Duration,
 ) -> Result<CommandResult, String> {
     let handle = connect(config).await?;
-    let result = async {
-        let channel = handle
-            .channel_open_session()
-            .await
-            .map_err(|error| format!("Unable to open SSH channel: {error}"))?;
-        channel
-            .exec(true, command)
-            .await
-            .map_err(|error| format!("Unable to execute command: {error}"))?;
-        let (mut reader, writer) = channel.split();
-
-        if let Some(input) = stdin {
-            writer
-                .data(input.as_bytes())
-                .await
-                .map_err(|error| format!("Unable to write command input: {error}"))?;
-            let _ = writer.eof().await;
-        }
-
-        let mut stdout = String::new();
-        let mut stderr = String::new();
-        let mut exit_status = None;
-
-        timeout(command_timeout, async {
-            loop {
-                match reader.wait().await {
-                    Some(ChannelMsg::Data { data }) => {
-                        stdout.push_str(&String::from_utf8_lossy(&data));
-                        if stdout.len() > 16 * 1024 * 1024 {
-                            return Err("Remote command output exceeded 16 MB".to_string());
-                        }
-                    }
-                    Some(ChannelMsg::ExtendedData { data, .. }) => {
-                        stderr.push_str(&String::from_utf8_lossy(&data));
-                        if stderr.len() > 16 * 1024 * 1024 {
-                            return Err("Remote command error output exceeded 16 MB".to_string());
-                        }
-                    }
-                    Some(ChannelMsg::ExitStatus {
-                        exit_status: status,
-                    }) => {
-                        exit_status = Some(status);
-                    }
-                    Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => break Ok(()),
-                    _ => {}
-                }
-            }
-        })
-        .await
-        .map_err(|_| {
-            format!(
-                "Remote command timed out after {} seconds",
-                command_timeout.as_secs()
-            )
-        })??;
-
-        Ok(CommandResult {
-            stdout,
-            stderr,
-            exit_status,
-        })
-    }
-    .await;
-
+    let result =
+        run_command_on_handle_with_input_timeout(&handle, command, stdin, command_timeout).await;
     disconnect(&handle).await;
     result
+}
+
+pub async fn run_command_on_handle_with_input_timeout(
+    handle: &SshHandle,
+    command: &str,
+    stdin: Option<&str>,
+    command_timeout: Duration,
+) -> Result<CommandResult, String> {
+    let channel = handle
+        .channel_open_session()
+        .await
+        .map_err(|error| format!("Unable to open SSH channel: {error}"))?;
+    channel
+        .exec(true, command)
+        .await
+        .map_err(|error| format!("Unable to execute command: {error}"))?;
+    let (mut reader, writer) = channel.split();
+
+    if let Some(input) = stdin {
+        writer
+            .data(input.as_bytes())
+            .await
+            .map_err(|error| format!("Unable to write command input: {error}"))?;
+        let _ = writer.eof().await;
+    }
+
+    let mut stdout = String::new();
+    let mut stderr = String::new();
+    let mut exit_status = None;
+
+    timeout(command_timeout, async {
+        loop {
+            match reader.wait().await {
+                Some(ChannelMsg::Data { data }) => {
+                    stdout.push_str(&String::from_utf8_lossy(&data));
+                    if stdout.len() > 16 * 1024 * 1024 {
+                        return Err("Remote command output exceeded 16 MB".to_string());
+                    }
+                }
+                Some(ChannelMsg::ExtendedData { data, .. }) => {
+                    stderr.push_str(&String::from_utf8_lossy(&data));
+                    if stderr.len() > 16 * 1024 * 1024 {
+                        return Err("Remote command error output exceeded 16 MB".to_string());
+                    }
+                }
+                Some(ChannelMsg::ExitStatus {
+                    exit_status: status,
+                }) => {
+                    exit_status = Some(status);
+                }
+                Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => break Ok(()),
+                _ => {}
+            }
+        }
+    })
+    .await
+    .map_err(|_| {
+        format!(
+            "Remote command timed out after {} seconds",
+            command_timeout.as_secs()
+        )
+    })??;
+
+    Ok(CommandResult {
+        stdout,
+        stderr,
+        exit_status,
+    })
 }
 
 async fn authenticate(

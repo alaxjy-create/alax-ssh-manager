@@ -83,12 +83,14 @@ export function RemoteFileManager() {
   const [addressValue, setAddressValue] = useState(activePath);
   const [pathHistory, setPathHistory] = useState<string[]>([activePath]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [propertyEntry, setPropertyEntry] = useState<RemoteFileEntry | null>(null);
   const [preview, setPreview] = useState<RemotePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [editorFile, setEditorFile] = useState<RemoteTextFile | null>(null);
 
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const directoryRequestIdRef = useRef(0);
   const pathParts = activePath.split("/").filter(Boolean);
   const selectedEntries = files.filter((file) => selectedPaths.has(file.path));
   const primarySelection = selectedEntries[0] ?? null;
@@ -173,18 +175,17 @@ export function RemoteFileManager() {
 
   function navigateTo(path: string, recordHistory = true) {
     const nextPath = path.trim() || "/";
+    if (nextPath === activePath || isLoading) return;
     if (recordHistory) {
-      setPathHistory((history) => {
-        const trimmed = history.slice(0, historyIndex + 1);
-        if (trimmed.at(-1) === nextPath) return trimmed;
-        return [...trimmed, nextPath];
-      });
-      setHistoryIndex((index) => index + 1);
+      const trimmed = pathHistory.slice(0, historyIndex + 1);
+      setPathHistory([...trimmed, nextPath]);
+      setHistoryIndex(trimmed.length);
     }
     setActivePath(nextPath);
   }
 
   function goHistory(offset: -1 | 1) {
+    if (isLoading) return;
     const nextIndex = historyIndex + offset;
     const nextPath = pathHistory[nextIndex];
     if (!nextPath) return;
@@ -227,15 +228,22 @@ export function RemoteFileManager() {
 
   async function refreshDirectory() {
     if (!selectedServerId || !isTauriRuntime()) return;
+    const requestId = ++directoryRequestIdRef.current;
     try {
       setIsLoading(true);
+      setDirectoryError(null);
       const entries = await readRemoteDirectory(selectedServerId, activePath);
+      if (requestId !== directoryRequestIdRef.current) return;
       setFiles(entries);
       setSelectedPaths(new Set());
     } catch (error) {
-      addLog({ level: "error", category: "sftp", message: error instanceof Error ? error.message : String(error) });
+      if (requestId !== directoryRequestIdRef.current) return;
+      const message = error instanceof Error ? error.message : String(error);
+      setFiles([]);
+      setDirectoryError(message);
+      addLog({ level: "error", category: "sftp", message });
     } finally {
-      setIsLoading(false);
+      if (requestId === directoryRequestIdRef.current) setIsLoading(false);
     }
   }
 
@@ -412,6 +420,7 @@ export function RemoteFileManager() {
   }
 
   function openEntry(entry: RemoteFileEntry) {
+    if (isLoading) return;
     if (entry.kind === "directory" || entry.kind === "link") {
       navigateTo(entry.path);
     } else if (isTextEntry(entry)) {
@@ -466,13 +475,13 @@ export function RemoteFileManager() {
       ) : null}
 
       <div className="flex h-12 shrink-0 items-center gap-2 border-b bg-card px-3">
-        <Button variant="ghost" size="icon" title="后退" onClick={() => goHistory(-1)} disabled={historyIndex <= 0}>
+        <Button variant="ghost" size="icon" title="后退" onClick={() => goHistory(-1)} disabled={isLoading || historyIndex <= 0}>
           <ArrowLeft size={16} />
         </Button>
-        <Button variant="ghost" size="icon" title="前进" onClick={() => goHistory(1)} disabled={historyIndex >= pathHistory.length - 1}>
+        <Button variant="ghost" size="icon" title="前进" onClick={() => goHistory(1)} disabled={isLoading || historyIndex >= pathHistory.length - 1}>
           <ArrowRight size={16} />
         </Button>
-        <Button variant="ghost" size="icon" title="上一层" onClick={() => navigateTo(parentPath(activePath))} disabled={activePath === "/"}>
+        <Button variant="ghost" size="icon" title="上一层" onClick={() => navigateTo(parentPath(activePath))} disabled={isLoading || activePath === "/"}>
           <ArrowUp size={16} />
         </Button>
         <Button variant="ghost" size="icon" title="刷新" onClick={() => void refreshDirectory()} disabled={isLoading}>
@@ -530,6 +539,17 @@ export function RemoteFileManager() {
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-h-0 overflow-auto p-3" onContextMenu={onBlankContextMenu}>
           <div className="overflow-hidden rounded-md border bg-card">
+            {isLoading ? (
+              <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                <RefreshCw size={15} className="animate-spin" />
+                正在读取 {activePath}，受保护目录可能需要 sudo 验证...
+              </div>
+            ) : null}
+            {directoryError ? (
+              <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                无法读取 {activePath}：{directoryError}
+              </div>
+            ) : null}
             <div className="grid grid-cols-[40px_minmax(220px,1fr)_110px_160px_120px_100px_44px] border-b bg-muted/60 px-3 py-2 text-xs font-medium text-muted-foreground">
               <div />
               <button className="text-left" onClick={() => setSortKey("name")}>名称</button>
@@ -539,7 +559,7 @@ export function RemoteFileManager() {
               <div>所有者</div>
               <div />
             </div>
-            {visibleFiles.length === 0 ? (
+            {!isLoading && !directoryError && visibleFiles.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">此文件夹为空</div>
             ) : null}
             {visibleFiles.map((entry) => (
