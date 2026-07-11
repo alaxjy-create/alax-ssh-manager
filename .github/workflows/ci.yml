@@ -28,15 +28,22 @@ jobs:
 
   rust:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: src-tauri
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
       - run: rustup component add rustfmt clippy
+        working-directory: src-tauri
       - run: cargo fmt --all -- --check
+        working-directory: src-tauri
       - run: cargo clippy --all-targets --all-features -- -D warnings
+        working-directory: src-tauri
       - run: cargo test --all-targets
+        working-directory: src-tauri
 
   desktop:
     runs-on: windows-latest
