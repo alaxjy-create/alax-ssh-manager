@@ -6,13 +6,19 @@
 
 ALAX SSH Manager 是一款 Windows 优先的 SSH/SFTP 桌面管理工具，使用 Tauri、React 和 Rust 构建。
 
-当前版本：**v0.5.0**。
+当前版本：**v0.5.1**。
 
 ## 下载
 
 - [GitHub Releases](https://github.com/alaxjy-create/alax-ssh-manager/releases/latest)
 - 绿色版无需安装，服务器配置和凭据保存在当前 Windows 用户的本地数据目录与系统凭据存储中。
-- v0.5.0 暂未进行 Authenticode 代码签名。运行前请核对 Release 页面提供的 SHA-256；Windows SmartScreen 可能显示未知发布者提示。
+- v0.5.1 暂未进行 Authenticode 代码签名。运行前请核对 Release 页面提供的 SHA-256；Windows SmartScreen 可能显示未知发布者提示。
+
+## v0.5.1 更新
+
+- 修复绿色版错误加载开发服务器、在未运行 Vite 时显示 `localhost 拒绝连接` 的问题。
+- 生产构建现在显式启用 Tauri `custom-protocol`，前端资源会内置到 EXE。
+- 构建命令会强制校验生产协议 feature，避免误发开发模式程序。
 
 ## v0.5.0 更新
 

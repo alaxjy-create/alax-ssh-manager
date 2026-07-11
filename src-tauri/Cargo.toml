@@ -1,12 +1,16 @@
 [package]
 name = "alax-ssh-manager"
-version = "0.5.0"
+version = "0.5.1"
 description = "ALAX SSH Manager desktop app"
 authors = ["ALAX"]
 license = "MIT"
 repository = "https://github.com/alaxjy-create/alax-ssh-manager"
 homepage = "https://github.com/alaxjy-create/alax-ssh-manager"
 edition = "2021"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
 
 [lib]
 name = "alax_ssh_manager_lib"
