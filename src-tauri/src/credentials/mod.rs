@@ -35,6 +35,22 @@ pub async fn read_secret_async(reference: String) -> Result<String, String> {
         })
 }
 
+#[cfg(all(test, target_os = "windows"))]
+mod tests {
+    use super::{create_secret_ref, delete_secret, read_secret, save_secret};
+
+    #[test]
+    fn secure_store_round_trips_empty_secret() {
+        let reference = create_secret_ref("credential-test", "empty-password");
+        save_secret(&reference, "").expect("empty secret should be stored");
+        assert_eq!(
+            read_secret(&reference).expect("empty secret should be read"),
+            ""
+        );
+        delete_secret(&reference).expect("test credential should be deleted");
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn platform_save_secret(reference: &str, secret: &str) -> Result<(), String> {
     windows_store::save_secret(reference, secret)
@@ -169,6 +185,10 @@ mod windows_store {
 
         let result = unsafe {
             let credential = &*credential_ptr;
+            if credential.CredentialBlobSize == 0 {
+                CredFree(credential_ptr.cast());
+                return Ok(String::new());
+            }
             let bytes = std::slice::from_raw_parts(
                 credential.CredentialBlob,
                 credential.CredentialBlobSize as usize,

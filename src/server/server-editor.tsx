@@ -18,6 +18,7 @@ const emptyServer: ServerFormInput = {
   port: 22,
   username: "",
   authType: "password",
+  useEmptyPassword: false,
   groupId: null,
   tags: [],
   note: "",
@@ -158,9 +159,29 @@ export function ServerEditor({ open, server, onClose }: ServerEditorProps) {
           </select>
         </Field>
         {form.authType === "password" ? (
-          <Field label="密码">
-            <Input type="password" value={form.password ?? ""} onChange={(event) => update("password", event.target.value)} placeholder="留空则不修改已有密码" />
-          </Field>
+          <div className="space-y-2">
+            <Field label="密码">
+              <Input
+                type="password"
+                value={form.password ?? ""}
+                disabled={form.useEmptyPassword}
+                onChange={(event) => update("password", event.target.value)}
+                placeholder={server ? "留空则不修改已有密码" : "输入密码"}
+              />
+            </Field>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-primary"
+                checked={form.useEmptyPassword ?? false}
+                onChange={(event) => {
+                  update("useEmptyPassword", event.target.checked);
+                  if (event.target.checked) update("password", "");
+                }}
+              />
+              此服务器使用空密码
+            </label>
+          </div>
         ) : (
           <>
             <Field label="私钥路径">

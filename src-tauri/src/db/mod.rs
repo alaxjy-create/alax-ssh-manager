@@ -105,6 +105,8 @@ pub struct ServerInput {
     pub username: String,
     pub auth_type: String,
     pub password: Option<String>,
+    #[serde(default)]
+    pub use_empty_password: bool,
     pub private_key_path: Option<String>,
     pub private_key_content: Option<String>,
     pub passphrase: Option<String>,
@@ -656,6 +658,7 @@ mod tests {
             username: "root".to_string(),
             auth_type: "password".to_string(),
             password: None,
+            use_empty_password: false,
             private_key_path: None,
             private_key_content: None,
             passphrase: None,

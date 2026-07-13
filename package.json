@@ -1,20 +1,11 @@
 {
   "name": "alax-ssh-manager",
   "private": true,
-  "version": "0.5.3",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/alaxjy-create/alax-ssh-manager.git"
-  },
-  "bugs": {
-    "url": "https://github.com/alaxjy-create/alax-ssh-manager/issues"
-  },
-  "homepage": "https://github.com/alaxjy-create/alax-ssh-manager#readme",
+  "version": "0.5.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build --configLoader runner",
     "check": "tsc --noEmit",
     "preview": "vite preview",
     "tauri:dev": "tauri dev",

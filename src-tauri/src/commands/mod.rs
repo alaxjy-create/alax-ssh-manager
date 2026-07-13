@@ -588,6 +588,7 @@ pub fn duplicate_server(
         username: profile.username,
         auth_type: profile.auth_type,
         password: None,
+        use_empty_password: false,
         private_key_path: connection.private_key_path,
         private_key_content: None,
         passphrase: None,
@@ -2133,10 +2134,10 @@ fn decode_base64_lossy(input: &str) -> Vec<u8> {
 fn validate_create_secrets(input: &db::ServerInput) -> Result<(), String> {
     match input.auth_type.as_str() {
         "password" => {
-            if has_secret(input.password.as_deref()) {
+            if password_is_supplied(input) {
                 Ok(())
             } else {
-                Err("密码登录需要输入密码。".to_string())
+                Err("密码登录需要输入密码，空密码服务器请勾选“此服务器使用空密码”。".to_string())
             }
         }
         "private_key" | "private_key_with_passphrase" => {
@@ -2162,7 +2163,7 @@ fn validate_update_secrets(
 
     match input.auth_type.as_str() {
         "password" => {
-            if has_secret(input.password.as_deref()) {
+            if password_is_supplied(input) {
                 return Ok(());
             }
 
@@ -2228,27 +2229,32 @@ fn has_secret(value: Option<&str>) -> bool {
     value.map(|value| !value.trim().is_empty()).unwrap_or(false)
 }
 
+fn password_is_supplied(input: &db::ServerInput) -> bool {
+    input.use_empty_password || has_secret(input.password.as_deref())
+}
+
 fn save_input_secrets(
     server_id: &str,
     input: &db::ServerInput,
 ) -> Result<(Option<String>, Option<String>), String> {
     let credential_secret = match input.auth_type.as_str() {
-        "password" => input.password.as_ref(),
-        "private_key_with_passphrase" => input.passphrase.as_ref(),
+        "password" if input.use_empty_password => Some(""),
+        "password" => input
+            .password
+            .as_deref()
+            .filter(|secret| !secret.trim().is_empty()),
+        "private_key_with_passphrase" => input
+            .passphrase
+            .as_deref()
+            .filter(|secret| !secret.trim().is_empty()),
         _ => None,
     };
     let credential_ref = if let Some(secret) = credential_secret {
-        if secret.is_empty() {
-            None
-        } else {
-            let reference = credentials::create_secret_ref(server_id, "credential");
-            credentials::save_secret(&reference, secret).map_err(|error| {
-                format!(
-                    "无法保存密码到系统安全凭据，请确认 Windows 凭据管理器可用。详细信息: {error}"
-                )
-            })?;
-            Some(reference)
-        }
+        let reference = credentials::create_secret_ref(server_id, "credential");
+        credentials::save_secret(&reference, secret).map_err(|error| {
+            format!("无法保存密码到系统安全凭据，请确认系统凭据存储可用。详细信息: {error}")
+        })?;
+        Some(reference)
     } else {
         None
     };
@@ -2290,7 +2296,35 @@ fn delete_secret_refs<'a>(references: impl IntoIterator<Item = Option<&'a str>>)
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_permission_mode, validate_remote_path};
+    use super::{password_is_supplied, validate_permission_mode, validate_remote_path};
+    use crate::db::ServerInput;
+
+    fn password_input(password: Option<&str>, use_empty_password: bool) -> ServerInput {
+        ServerInput {
+            id: None,
+            name: "test".to_string(),
+            host: "127.0.0.1".to_string(),
+            port: 22,
+            username: "root".to_string(),
+            auth_type: "password".to_string(),
+            password: password.map(str::to_string),
+            use_empty_password,
+            private_key_path: None,
+            private_key_content: None,
+            passphrase: None,
+            group_id: None,
+            tags: Vec::new(),
+            note: String::new(),
+        }
+    }
+
+    #[test]
+    fn accepts_explicit_empty_password_only() {
+        assert!(password_is_supplied(&password_input(None, true)));
+        assert!(password_is_supplied(&password_input(Some("secret"), false)));
+        assert!(!password_is_supplied(&password_input(None, false)));
+        assert!(!password_is_supplied(&password_input(Some(""), false)));
+    }
 
     #[test]
     fn blocks_dangerous_remote_paths() {

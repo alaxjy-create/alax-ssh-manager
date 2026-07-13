@@ -6,13 +6,19 @@
 
 ALAX SSH Manager 是一款 Windows 优先的 SSH/SFTP 桌面管理工具，使用 Tauri、React 和 Rust 构建。
 
-当前版本：**v0.5.3**。
+当前版本：**v0.5.4**。
 
 ## 下载
 
 - [GitHub Releases](https://github.com/alaxjy-create/alax-ssh-manager/releases/latest)
 - 绿色版无需安装，服务器配置和凭据保存在当前 Windows 用户的本地数据目录与系统凭据存储中。
-- v0.5.3 暂未进行 Authenticode 代码签名。运行前请核对 Release 页面提供的 SHA-256；Windows SmartScreen 可能显示未知发布者提示。
+- v0.5.4 暂未进行 Authenticode 代码签名。运行前请核对 Release 页面提供的 SHA-256；Windows SmartScreen 可能显示未知发布者提示。
+
+## v0.5.4 更新
+
+- 密码认证现在支持显式选择“此服务器使用空密码”，适用于允许空密码登录的 SSH 服务器。
+- 空密码仍只保存在系统安全凭据中，不写入 SQLite；编辑服务器时未勾选且留空仍会保留已有密码。
+- 修复 Windows 凭据管理器读取零长度凭据时可能触发后端崩溃的问题。
 
 ## v0.5.3 更新
 

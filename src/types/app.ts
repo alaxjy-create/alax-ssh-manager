@@ -35,6 +35,7 @@ export interface ServerFormInput {
   username: string;
   authType: AuthType;
   password?: string;
+  useEmptyPassword?: boolean;
   privateKeyPath?: string;
   privateKeyContent?: string;
   passphrase?: string;
