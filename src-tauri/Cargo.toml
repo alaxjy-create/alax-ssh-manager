@@ -20,7 +20,7 @@ tauri-build = { version = "2", features = [] }
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
 flate2 = "1"
-keyring = "3"
+keyring = "4"
 rusqlite = { version = "0.32", features = ["bundled"] }
 russh = { version = "0.62", default-features = false, features = ["ring", "flate2"] }
 russh-sftp = "2.3"
